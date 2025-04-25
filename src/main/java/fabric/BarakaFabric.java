@@ -2,12 +2,12 @@ package fabric;
 
 
 import character.Baraka;
-import character.Player;
+import character.Character;
 
 public class BarakaFabric implements EnemyFabricInterface {
 
     @Override
-    public Player create() {
+    public Character create() {
         return new Baraka(1, 100, 12);
     }
 }

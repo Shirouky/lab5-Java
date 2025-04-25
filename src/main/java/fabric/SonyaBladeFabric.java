@@ -6,12 +6,12 @@ package fabric;
 
 
 import character.SonyaBlade;
-import character.Player;
+import character.Character;
 
 public class SonyaBladeFabric implements EnemyFabricInterface {
 
     @Override
-    public Player create() {
+    public Character create() {
         return new SonyaBlade(1, 80, 16);
     }
 

@@ -1,16 +1,12 @@
 package fabric;
 
 import character.ShaoKahn;
-import character.Player;
+import character.Character;
 
 public class ShaoKahnFabric implements EnemyFabricInterface {
 
     @Override
-    public Player create() {
+    public Character create() {
         return new ShaoKahn(3, 100, 30);
-    }
-
-    public Player createPowerful(){
-        return new ShaoKahn(3, 145, 44);
     }
 }

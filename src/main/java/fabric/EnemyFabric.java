@@ -1,10 +1,10 @@
 package fabric;
 
-import character.Player;
+import character.Character;
 
 public class EnemyFabric {
 
-    public Player create(int enemyIndex) {
+    public Character create(int enemyIndex) {
         EnemyFabricInterface fabric = switch (enemyIndex) {
             case 0 -> new BarakaFabric();
             case 1 -> new SubZeroFabric();

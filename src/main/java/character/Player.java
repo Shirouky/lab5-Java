@@ -1,66 +1,85 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package character;
 
-public class Player {
+/**
+ * @author Мария
+ */
+public class Player extends Character {
 
-    private int level;
-    private int health;
-    private int maxHealth;
-    private int damage;
-    private int attack;
+
+    private int points;
+    private int experience;
+    private int win;
+    private int nextExperience;
+
 
     public Player(int level, int health, int damage) {
-        this.level = level;
-        this.health = health;
-        this.damage = damage;
-        this.attack = 1;
-        this.maxHealth = health;
+        super(level, health, damage);
+        this.points = 0;
+        this.experience = 0;
+        this.nextExperience = 40;
+        this.win = 0;
+        this.name = "You";
     }
 
-    public void setLevel() {
-        this.level++;
+
+    public int getPoints() {
+        return this.points;
     }
 
-    public void setHealth(int health) {
-        this.health += health;
+    public int getExperience() {
+        return this.experience;
     }
 
-    public void setNewHealth(int health) {
-        this.health = health;
+    public int getNextExperience() {
+        return this.nextExperience;
     }
 
-    public void setDamage(int damage) {
-        this.damage += damage;
+    public int getVictories() {
+        return this.win;
     }
 
-    public void setAttack(int attack) {
-        this.attack = attack;
+    public void setPoints(int points) {
+        this.points += points;
     }
 
-    public void setMaxHealth(int health) {
-        this.maxHealth += health;
+    public void addExperience(int experience) {
+        this.experience += experience;
     }
 
-    public int getLevel() {
-        return this.level;
+    public void setNextExperience(int experience) {
+        this.nextExperience = experience;
     }
 
-    public int getHealth() {
-        return this.health;
+    public void addVictory() {
+        this.win++;
     }
 
-    public int getDamage() {
-        return this.damage;
-    }
-
-    public int getAttack() {
-        return this.attack;
-    }
-
-    public int getMaxHealth() {
-        return this.maxHealth;
-    }
-
-    public String getName() {
-        return "";
+    public void newHealth() {
+        int hp = 0;
+        int damage = switch (level) {
+            case 1 -> {
+                hp = 25;
+                yield 3;
+            }
+            case 2 -> {
+                hp = 30;
+                yield 3;
+            }
+            case 3 -> {
+                hp = 30;
+                yield 4;
+            }
+            case 4 -> {
+                hp = 40;
+                yield 6;
+            }
+            default -> 0;
+        };
+        setMaxHealth(hp);
+        setDamage(damage);
     }
 }

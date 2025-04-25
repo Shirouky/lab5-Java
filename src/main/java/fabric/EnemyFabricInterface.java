@@ -1,8 +1,8 @@
 package fabric;
 
-import character.Player;
+import character.Character;
 
 
 public interface EnemyFabricInterface {
-    Player create();
+    Character create();
 }

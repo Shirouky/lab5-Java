@@ -8,14 +8,12 @@ package character;
  *
  * @author Мария
  */
-public class LiuKang extends Player {
+public class LiuKang extends Character {
 
     public LiuKang(int level, int health, int damage) {
         super(level, health, damage);
-    }
-
-    @Override
-    public String getName(){
-        return "Liu Kang";
+        this.name = "Liu Kang";
+        this.image = "Liu Kang.jpg";
+        this.type = "боец";
     }
 }

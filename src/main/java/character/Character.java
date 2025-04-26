@@ -3,13 +3,13 @@ package character;
 public class Character {
 
     protected int level;
-    private int health;
-    private int maxHealth;
-    private int damage;
-    private Action action;
+    protected int health;
+    protected int maxHealth;
+    protected int damage;
+    protected Action action;
     protected String image;
     protected String name;
-    protected String type = "";
+    protected String type = "игрок";
 
     public Character(int level, int health, int damage) {
         this.level = level;
@@ -17,10 +17,6 @@ public class Character {
         this.damage = damage;
         this.action = Action.ATTACK;
         this.maxHealth = health;
-    }
-
-    public void levelUP() {
-        this.level++;
     }
 
     public void takeDamage(int damage) {
@@ -69,20 +65,17 @@ public class Character {
         return this.maxHealth;
     }
 
+    public void reset() {
+        health = maxHealth;
+    }
+
     public String getImage() {
         return image;
     }
 
-    public void setImage(String image) {
-        this.image = image;
-    }
 
     public String getType() {
         return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
     }
 
     public void setName(String name) {
@@ -93,7 +86,8 @@ public class Character {
         return this.name;
     }
 
-    public void newHealth(Player player) {
+    public void levelUP(Player player) {
+        level++;
         int hp = 0;
         int damage = switch (player.getLevel()) {
             case 1 -> {
@@ -116,6 +110,6 @@ public class Character {
         };
         setMaxHealth(getMaxHealth() * hp / 100);
         setDamage(getDamage() * damage / 100);
-        levelUP();
+        health = maxHealth;
     }
 }

@@ -1,5 +1,5 @@
 package character;
 
 public enum Action {
-    ATTACK, DEFEND, STUN
+    ATTACK, DEFEND, STUN, REGENERATE, WEAKEN
 }

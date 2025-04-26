@@ -15,42 +15,36 @@ import java.util.Objects;
 public class GUI extends JFrame {
     Player player;
     Character enemy;
-    String nameButton = "";
     Controller controller;
 
     public GUI(Controller controller) {
         this.controller = controller;
         initComponents();
-        setupGame();
-        controller.readFromExcel();
+        writeToTable(controller.readFromExcel());
 
         itemsGroup.add(itemsRadio1);
         itemsGroup.add(itemsRadio2);
         itemsGroup.add(itemsRadio3);
     }
 
-    private void setupGame() {
-        controller.newItems();
-        controller.readFromExcel();
-    }
-
     private void startGame() {
-        MainFrame.setVisible(rootPaneCheckingEnabled);
-        MainFrame.setSize(1000, 700);
+        locationDialog.dispose();
 
-        initPlayer();
-        initEnemy();
-
-        playerProgressBar.setValue(player.getMaxHealth());
-        enemyProgressBar.setValue(enemy.getMaxHealth());
+        int locations = Integer.parseInt(locationNumberField.getText());
+        controller.initGame(locations);
+        GameFrame.setVisible(rootPaneCheckingEnabled);
+        GameFrame.setSize(1000, 700);
 
         newRoundTexts();
     }
 
-    private void initPlayer() {
-        player = controller.newPlayer();
+    private void chooseLocations() {
+        locationDialog.setVisible(true);
+    }
 
-        experience.setText(player.getExperience() + "/" + player.getNextExperience());
+    private void initPlayer() {
+        player = controller.getPlayer();
+
         playerName.setText(player.getName() + " (" + player.getType() + ")");
         playerImage.setIcon(new ImageIcon(player.getImage()));
         playerLevel.setText(player.getLevel() + " level");
@@ -61,7 +55,7 @@ public class GUI extends JFrame {
     }
 
     private void initEnemy() {
-        enemy = controller.newEnemy();
+        enemy = controller.getEnemy();
 
         enemyName.setText(enemy.getName() + " (" + enemy.getType() + ")");
         enemyImage.setIcon(new ImageIcon(enemy.getImage()));
@@ -72,26 +66,41 @@ public class GUI extends JFrame {
         enemyProgressBar.setValue(enemy.getHealth());
     }
 
-    private void newRoundTexts() {
-        int turn = controller.getTurn();
+    public void initItems() {
+        Item[] items = controller.getItems();
+        itemsRadio1.setText(items[0].getName() + ", " + items[0].getAmount() + " шт");
+        itemsRadio2.setText(items[1].getName() + ", " + items[1].getAmount() + " шт");
+        itemsRadio3.setText(items[2].getName() + ", " + items[2].getAmount() + " шт");
+    }
 
+    private void newRoundTexts() {
         initEnemy();
         initPlayer();
 
-        if (turn % 2 == 1) {
+        locations.setText(controller.getCurrentLocation() + "/" + controller.getLocations());
+        enemies.setText(controller.getCurrentEnemy() + "/" + controller.getEnemies());
+
+        experience.setText(player.getExperience() + "/" + player.getNextExperience());
+        points.setText(Integer.toString(player.getPoints()));
+        if (controller.getTurn()) {
             turnLabel.setText("Your turn");
         } else {
             turnLabel.setText(enemy.getName() + "'s turn");
         }
         actionLabel.setText("");
-        bagText();
+        initItems();
     }
 
-    public void bagText() {
-        Item[] items = controller.getItems();
-        itemsRadio1.setText(items[0].getName() + ", " + items[0].getAmount() + " шт");
-        itemsRadio2.setText(items[1].getName() + ", " + items[1].getAmount() + " шт");
-        itemsRadio3.setText(items[2].getName() + ", " + items[2].getAmount() + " шт");
+    private void updateRoundTexts() {
+        playerProgressBar.setValue(player.getHealth());
+        enemyProgressBar.setValue(enemy.getHealth());
+        enemyHealth.setText(enemy.getHealth() + "/" + enemy.getMaxHealth());
+        playerHealth.setText(player.getHealth() + "/" + player.getMaxHealth());
+        if (controller.getTurn()) {
+            turnLabel.setText("Your turn");
+        } else {
+            turnLabel.setText(enemy.getName() + "'s turn");
+        }
     }
 
     private void attack() {
@@ -109,37 +118,37 @@ public class GUI extends JFrame {
         statusLabel.setText(labels.get("status"));
         actionLabel.setText(labels.get("action"));
 
-        playerProgressBar.setValue(player.getHealth());
-        enemyProgressBar.setValue(enemy.getHealth());
-        changeRoundTexts();
         if (controller.resurrect()) resurrect();
-        if (controller.isEnd()) {
-//            HashMap<String, String> labels = controller.roundResult();
-            labels = controller.roundResult();
-            if (Objects.equals(labels.get("action"), "endFinalRound")) {
-                if (Objects.equals(labels.get("dialog"), "1")) {
-                    jDialog2.setVisible(true);
-                    jDialog2.setBounds(150, 150, 600, 500);
-                    victoryLabel1.setText(labels.get("victoryLabel"));
-                } else {
-                    jDialog4.setVisible(true);
-                    jDialog4.setBounds(150, 150, 600, 500);
-                    victoryLabel1.setText(labels.get("victoryLabel"));
-                }
-                dispose();
-            } else {
-                endRoundLabel.setText(labels.get("endRoundLabel"));
-                endRoundDialog.setVisible(true);
-                endRoundDialog.setBounds(300, 150, 700, 600);
-            }
-        }
+        updateRoundTexts();
 
-//        controller.hit(endRoundDialog, endRoundLabel, jDialog2,
-//                jDialog4, victoryLabel1, victoryLabel2);
-
-//        controller.addItems();
+        if (controller.isEnd()) endRound();
     }
 
+    private void endRound() {
+        HashMap<String, String> labels = controller.roundResult();
+        if (Objects.equals(labels.get("action"), "endGame")) {
+            if (Objects.equals(labels.get("dialog"), "1")) {
+                recordDialog.setVisible(true);
+                recordDialog.setBounds(150, 150, 600, 500);
+                victoryLabel1.setText(labels.get("victoryLabel"));
+            } else {
+                noRecordDialog.setVisible(true);
+                noRecordDialog.setBounds(150, 150, 600, 500);
+                victoryLabel1.setText(labels.get("victoryLabel"));
+            }
+            GameFrame.dispose();
+        } else {
+            endRoundLabel.setText(labels.get("endRoundLabel"));
+            endRoundDialog.setVisible(true);
+            endRoundDialog.setBounds(300, 150, 700, 600);
+        }
+
+    }
+
+    private void nextRound() {
+        newRoundTexts();
+        endRoundDialog.dispose();
+    }
 
     private void resurrect() {
         Item item = controller.getItem(2);
@@ -147,30 +156,6 @@ public class GUI extends JFrame {
         playerHealth.setText(player.getHealth() + "/" + player.getMaxHealth());
         itemsRadio3.setText(item.getName() + ", " + item.getAmount() + " шт");
         statusLabel.setText("Вы воскресли");
-    }
-
-    private void changeRoundTexts() {
-        int turn = controller.getTurn();
-        enemyHealth.setText(enemy.getHealth() + "/" + enemy.getMaxHealth());
-        playerHealth.setText(player.getHealth() + "/" + player.getMaxHealth());
-        if (turn % 2 == 1) {
-            turnLabel.setText("Your turn");
-        } else {
-            turnLabel.setText(enemy.getName() + "'s turn");
-        }
-    }
-
-    private void nextRound() {
-//        enemy = controller.fight.newRound(player, enemyImage, playerProgressBar, enemyProgressBar,
-//                enemyName, enemyDamage, enemyHealth, controller.action);
-
-        initEnemy();
-        newRoundTexts();
-        playerProgressBar.setMaximum(player.getMaxHealth());
-        enemyProgressBar.setMaximum(enemy.getMaxHealth());
-        playerProgressBar.setValue(player.getHealth());
-        enemyProgressBar.setValue(enemy.getHealth());
-        endRoundDialog.dispose();
     }
 
     public void writeToTable(ArrayList<Result> results) {
@@ -190,7 +175,7 @@ public class GUI extends JFrame {
     private void jButton6ActionPerformed() {
         ArrayList<Result> results = controller.endGameTop(playerNameField.getText());
         writeToTable(results);
-        jDialog2.dispose();
+        recordDialog.dispose();
         playerNameField.setText("");
     }
 
@@ -198,24 +183,16 @@ public class GUI extends JFrame {
         jDialog3.dispose();
     }
 
-    private void jButton2ActionPerformed() {
+    private void viewResults() {
         jDialog3.setVisible(true);
         jDialog3.setBounds(100, 100, 580, 450);
     }
 
-    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        jDialog4.dispose();
+    private void endGame(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
+        noRecordDialog.dispose();
     }
 
-    private void itemsRadio1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_itemsRadio1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_itemsRadio1ActionPerformed
-
-    private void itemsRadio2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_itemsRadio2ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_itemsRadio2ActionPerformed
-
-    private void jButton9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton9ActionPerformed
+    private void useItem(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_useItemButtonActionPerformed
         int choice = 0;
         if (itemsRadio1.isSelected()) {
             choice = 1;
@@ -224,26 +201,30 @@ public class GUI extends JFrame {
         } else if (itemsRadio3.isSelected()) {
             choice = 3;
         }
+
+        boolean isUsed = controller.useItem(choice);
         itemsErrorDialog.setBounds(300, 200, 400, 300);
-        boolean isUsed = controller.useItem(choice, itemsErrorDialog, itemsDialog);
-        if (isUsed) itemsDialog.setVisible(true);
+        itemsErrorDialog.setVisible(true);
+
+        if (!isUsed) itemsDialog.setVisible(true);
         else itemsErrorDialog.dispose();
+
         playerProgressBar.setValue(player.getHealth());
         playerHealth.setText(player.getHealth() + "/" + player.getMaxHealth());
-        bagText();
-    }//GEN-LAST:event_jButton9ActionPerformed
+        initItems();
+    }//GEN-LAST:event_useItemButtonActionPerformed
 
     private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
         itemsDialog.setVisible(true);
         itemsDialog.setBounds(300, 200, 430, 350);
     }//GEN-LAST:event_jButton10ActionPerformed
 
-    private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
+    private void okButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_okButtonActionPerformed
         itemsErrorDialog.dispose();
-    }//GEN-LAST:event_jButton11ActionPerformed
+    }//GEN-LAST:event_okButtonActionPerformed
 
     private void initComponents() {
-        MainFrame = new javax.swing.JFrame();
+        GameFrame = new javax.swing.JFrame();
         jPanel2 = new javax.swing.JPanel();
         playerImage = new javax.swing.JLabel();
         attackButton = new javax.swing.JButton();
@@ -274,7 +255,7 @@ public class GUI extends JFrame {
         jPanel3 = new javax.swing.JPanel();
         endRoundLabel = new javax.swing.JLabel();
         proceedButton = new javax.swing.JButton();
-        jDialog2 = new javax.swing.JDialog();
+        recordDialog = new javax.swing.JDialog();
         jPanel4 = new javax.swing.JPanel();
         victoryLabel1 = new javax.swing.JLabel();
         playerNameField = new javax.swing.JTextField();
@@ -286,30 +267,70 @@ public class GUI extends JFrame {
         recordsLabel = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         resultsTable = new javax.swing.JTable();
-        jButton7 = new javax.swing.JButton();
-        jDialog4 = new javax.swing.JDialog();
+        closeResultsButton = new javax.swing.JButton();
+        noRecordDialog = new javax.swing.JDialog();
         jPanel6 = new javax.swing.JPanel();
         victoryLabel2 = new javax.swing.JLabel();
         sorryLabel = new javax.swing.JLabel();
-        jButton8 = new javax.swing.JButton();
+        endGameButton = new javax.swing.JButton();
         itemsDialog = new javax.swing.JDialog();
         itemsPanel = new javax.swing.JPanel();
         jLabel30 = new javax.swing.JLabel();
         itemsRadio1 = new javax.swing.JRadioButton();
         itemsRadio2 = new javax.swing.JRadioButton();
         itemsRadio3 = new javax.swing.JRadioButton();
-        jButton9 = new javax.swing.JButton();
+        useItemButton = new javax.swing.JButton();
         itemsGroup = new javax.swing.ButtonGroup();
         itemsErrorDialog = new javax.swing.JDialog();
         jPanel8 = new javax.swing.JPanel();
         jLabel31 = new javax.swing.JLabel();
         jLabel32 = new javax.swing.JLabel();
-        jButton11 = new javax.swing.JButton();
+        okButton = new javax.swing.JButton();
         jPanel1 = new javax.swing.JPanel();
         header = new javax.swing.JLabel();
         startButton = new javax.swing.JButton();
         resultsButton = new javax.swing.JButton();
         MKImage = new javax.swing.JLabel();
+
+        locationLabel = new javax.swing.JLabel("Введите количество локаций");
+        locationNumberField = new javax.swing.JTextField();
+        locationButton = new javax.swing.JButton();
+        locationDialog = new javax.swing.JDialog();
+
+        currentLocation = new javax.swing.JLabel("Locations: ");
+        locations = new javax.swing.JLabel("1");
+        currentEnemy = new javax.swing.JLabel("Enemies in location:");
+        enemies = new javax.swing.JLabel("1");
+
+        locationButton.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
+        locationButton.setText("Продолжить");
+        locationButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                startGame();
+            }
+        });
+
+        locationDialog.setBounds(150, 150, 300, 200);
+        javax.swing.GroupLayout locationDialogLayout = new javax.swing.GroupLayout(locationDialog.getContentPane());
+        locationDialog.getContentPane().setLayout(locationDialogLayout);
+        locationDialogLayout.setHorizontalGroup(
+                locationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+
+                        .addGroup(locationDialogLayout.createParallelGroup()
+                                .addComponent(locationLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(locationNumberField)
+                                .addComponent(locationButton))
+
+        );
+        locationDialogLayout.setVerticalGroup(
+                locationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(locationDialogLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(locationLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(locationNumberField)
+                                .addComponent(locationButton)
+                                .addContainerGap())
+        );
 
         jPanel2.setBackground(new java.awt.Color(255, 255, 255));
 
@@ -445,6 +466,11 @@ public class GUI extends JFrame {
         jPanel2Layout.setHorizontalGroup(
                 jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(currentLocation)
+                                .addComponent(locations)
+                                .addComponent(currentEnemy)
+                                .addComponent(enemies))
+                        .addGroup(jPanel2Layout.createSequentialGroup()
                                 .addGap(31, 31, 31)
                                 .addComponent(enemyHealth)
                                 .addGap(18, 18, 18)
@@ -529,6 +555,10 @@ public class GUI extends JFrame {
         );
         jPanel2Layout.setVerticalGroup(
                 jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(currentLocation)
+                        .addComponent(locations)
+                        .addComponent(currentEnemy)
+                        .addComponent(enemies)
                         .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
                                 .addContainerGap(21, Short.MAX_VALUE)
                                 .addComponent(jLabel11, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -595,8 +625,8 @@ public class GUI extends JFrame {
                                         .addContainerGap(380, Short.MAX_VALUE)))
         );
 
-        javax.swing.GroupLayout MainFrameLayout = new javax.swing.GroupLayout(MainFrame.getContentPane());
-        MainFrame.getContentPane().setLayout(MainFrameLayout);
+        javax.swing.GroupLayout MainFrameLayout = new javax.swing.GroupLayout(GameFrame.getContentPane());
+        GameFrame.getContentPane().setLayout(MainFrameLayout);
         MainFrameLayout.setHorizontalGroup(
                 MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(MainFrameLayout.createSequentialGroup()
@@ -743,8 +773,8 @@ public class GUI extends JFrame {
                                 .addContainerGap())
         );
 
-        javax.swing.GroupLayout jDialog2Layout = new javax.swing.GroupLayout(jDialog2.getContentPane());
-        jDialog2.getContentPane().setLayout(jDialog2Layout);
+        javax.swing.GroupLayout jDialog2Layout = new javax.swing.GroupLayout(recordDialog.getContentPane());
+        recordDialog.getContentPane().setLayout(jDialog2Layout);
         jDialog2Layout.setHorizontalGroup(
                 jDialog2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jDialog2Layout.createSequentialGroup()
@@ -794,11 +824,11 @@ public class GUI extends JFrame {
         });
         jScrollPane1.setViewportView(resultsTable);
 
-        jButton7.setBackground(new java.awt.Color(255, 255, 153));
-        jButton7.setFont(new java.awt.Font("Comic Sans MS", 0, 18)); // NOI18N
-        jButton7.setForeground(new java.awt.Color(51, 51, 51));
-        jButton7.setText("Закрыть");
-        jButton7.addActionListener(new java.awt.event.ActionListener() {
+        closeResultsButton.setBackground(new java.awt.Color(255, 255, 153));
+        closeResultsButton.setFont(new java.awt.Font("Comic Sans MS", 0, 18)); // NOI18N
+        closeResultsButton.setForeground(new java.awt.Color(51, 51, 51));
+        closeResultsButton.setText("Закрыть");
+        closeResultsButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton7ActionPerformed();
             }
@@ -810,7 +840,7 @@ public class GUI extends JFrame {
                 jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jPanel5Layout.createSequentialGroup()
                                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 143, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(closeResultsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 143, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                                 .addGroup(jPanel5Layout.createSequentialGroup()
                                                         .addGap(160, 160, 160)
@@ -828,7 +858,7 @@ public class GUI extends JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 262, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jButton7, javax.swing.GroupLayout.DEFAULT_SIZE, 38, Short.MAX_VALUE)
+                                .addComponent(closeResultsButton, javax.swing.GroupLayout.DEFAULT_SIZE, 38, Short.MAX_VALUE)
                                 .addContainerGap())
         );
 
@@ -854,13 +884,13 @@ public class GUI extends JFrame {
         sorryLabel.setForeground(new java.awt.Color(102, 102, 102));
         sorryLabel.setText("К сожалению, Ваш результат не попал в топ 10");
 
-        jButton8.setBackground(new java.awt.Color(153, 153, 255));
-        jButton8.setFont(new java.awt.Font("Comic Sans MS", 1, 14)); // NOI18N
-        jButton8.setForeground(new java.awt.Color(51, 51, 51));
-        jButton8.setText("Закончить игру");
-        jButton8.addActionListener(new java.awt.event.ActionListener() {
+        endGameButton.setBackground(new java.awt.Color(153, 153, 255));
+        endGameButton.setFont(new java.awt.Font("Comic Sans MS", 1, 14)); // NOI18N
+        endGameButton.setForeground(new java.awt.Color(51, 51, 51));
+        endGameButton.setText("Закончить игру");
+        endGameButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton8ActionPerformed(evt);
+                endGame(evt);
             }
         });
 
@@ -878,7 +908,7 @@ public class GUI extends JFrame {
                                                 .addComponent(sorryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 333, javax.swing.GroupLayout.PREFERRED_SIZE))
                                         .addGroup(jPanel6Layout.createSequentialGroup()
                                                 .addGap(153, 153, 153)
-                                                .addComponent(jButton8, javax.swing.GroupLayout.PREFERRED_SIZE, 158, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                                .addComponent(endGameButton, javax.swing.GroupLayout.PREFERRED_SIZE, 158, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                 .addContainerGap(68, Short.MAX_VALUE))
         );
         jPanel6Layout.setVerticalGroup(
@@ -889,12 +919,12 @@ public class GUI extends JFrame {
                                 .addGap(41, 41, 41)
                                 .addComponent(sorryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(56, 56, 56)
-                                .addComponent(jButton8, javax.swing.GroupLayout.PREFERRED_SIZE, 51, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(endGameButton, javax.swing.GroupLayout.PREFERRED_SIZE, 51, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addContainerGap(56, Short.MAX_VALUE))
         );
 
-        javax.swing.GroupLayout jDialog4Layout = new javax.swing.GroupLayout(jDialog4.getContentPane());
-        jDialog4.getContentPane().setLayout(jDialog4Layout);
+        javax.swing.GroupLayout jDialog4Layout = new javax.swing.GroupLayout(noRecordDialog.getContentPane());
+        noRecordDialog.getContentPane().setLayout(jDialog4Layout);
         jDialog4Layout.setHorizontalGroup(
                 jDialog4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -915,34 +945,24 @@ public class GUI extends JFrame {
         itemsRadio1.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
         itemsRadio1.setForeground(new java.awt.Color(0, 0, 0));
         itemsRadio1.setText("Малое зелье лечение, 0 шт");
-        itemsRadio1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                itemsRadio1ActionPerformed(evt);
-            }
-        });
 
         itemsRadio2.setBackground(new java.awt.Color(190, 182, 135));
         itemsRadio2.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
         itemsRadio2.setForeground(new java.awt.Color(0, 0, 0));
         itemsRadio2.setText("Большое зелье лечение, 0 шт");
-        itemsRadio2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                itemsRadio2ActionPerformed(evt);
-            }
-        });
 
         itemsRadio3.setBackground(new java.awt.Color(190, 182, 135));
         itemsRadio3.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
         itemsRadio3.setForeground(new java.awt.Color(0, 0, 0));
         itemsRadio3.setText("Крест возрождения, 0 шт");
 
-        jButton9.setBackground(new java.awt.Color(239, 237, 14));
-        jButton9.setFont(new java.awt.Font("Comic Sans MS", 1, 14)); // NOI18N
-        jButton9.setForeground(new java.awt.Color(0, 0, 0));
-        jButton9.setText("Использовать");
-        jButton9.addActionListener(new java.awt.event.ActionListener() {
+        useItemButton.setBackground(new java.awt.Color(239, 237, 14));
+        useItemButton.setFont(new java.awt.Font("Comic Sans MS", 1, 14)); // NOI18N
+        useItemButton.setForeground(new java.awt.Color(0, 0, 0));
+        useItemButton.setText("Использовать");
+        useItemButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton9ActionPerformed(evt);
+                useItem(evt);
             }
         });
 
@@ -961,7 +981,7 @@ public class GUI extends JFrame {
                                                         .addComponent(jLabel30, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                         .addGroup(itemsPanelLayout.createSequentialGroup()
                                                 .addGap(139, 139, 139)
-                                                .addComponent(jButton9)))
+                                                .addComponent(useItemButton)))
                                 .addContainerGap(105, Short.MAX_VALUE))
         );
         itemsPanelLayout.setVerticalGroup(
@@ -976,7 +996,7 @@ public class GUI extends JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(itemsRadio3)
                                 .addGap(50, 50, 50)
-                                .addComponent(jButton9, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(useItemButton, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addContainerGap(54, Short.MAX_VALUE))
         );
 
@@ -1003,13 +1023,13 @@ public class GUI extends JFrame {
         jLabel32.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel32.setText("этот предмет");
 
-        jButton11.setBackground(new java.awt.Color(204, 204, 204));
-        jButton11.setFont(new java.awt.Font("Comic Sans MS", 0, 18)); // NOI18N
-        jButton11.setForeground(new java.awt.Color(51, 51, 51));
-        jButton11.setText("ОК");
-        jButton11.addActionListener(new java.awt.event.ActionListener() {
+        okButton.setBackground(new java.awt.Color(204, 204, 204));
+        okButton.setFont(new java.awt.Font("Comic Sans MS", 0, 18)); // NOI18N
+        okButton.setForeground(new java.awt.Color(51, 51, 51));
+        okButton.setText("ОК");
+        okButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton11ActionPerformed(evt);
+                okButtonActionPerformed(evt);
             }
         });
 
@@ -1028,7 +1048,7 @@ public class GUI extends JFrame {
                                                 .addGap(135, 135, 135))))
                         .addGroup(jPanel8Layout.createSequentialGroup()
                                 .addGap(150, 150, 150)
-                                .addComponent(jButton11, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(okButton, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(0, 0, Short.MAX_VALUE))
         );
         jPanel8Layout.setVerticalGroup(
@@ -1039,7 +1059,7 @@ public class GUI extends JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jLabel32)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 62, Short.MAX_VALUE)
-                                .addComponent(jButton11, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(okButton, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(52, 52, 52))
         );
 
@@ -1067,16 +1087,17 @@ public class GUI extends JFrame {
         startButton.setText("Начать новую игру");
         startButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                startGame();
+                chooseLocations();
             }
         });
+
 
         resultsButton.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
         resultsButton.setText("Посмотреть таблицу \nрезультатов");
         resultsButton.setHorizontalAlignment(javax.swing.SwingConstants.TRAILING);
         resultsButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed();
+                viewResults();
             }
         });
 
@@ -1141,22 +1162,22 @@ public class GUI extends JFrame {
     private javax.swing.ButtonGroup itemsGroup;
     private javax.swing.JButton startButton;
     private javax.swing.JButton itemsButton;
-    private javax.swing.JButton jButton11;
+    private javax.swing.JButton okButton;
     private javax.swing.JButton resultsButton;
     private javax.swing.JButton attackButton;
     private javax.swing.JButton defendButton;
     private javax.swing.JButton proceedButton;
     private javax.swing.JButton endButton;
-    private javax.swing.JButton jButton7;
-    private javax.swing.JButton jButton8;
-    private javax.swing.JButton jButton9;
+    private javax.swing.JButton closeResultsButton;
+    private javax.swing.JButton endGameButton;
+    private javax.swing.JButton useItemButton;
     private javax.swing.JDialog endRoundDialog;
-    private javax.swing.JDialog jDialog2;
+    private javax.swing.JDialog recordDialog;
     private javax.swing.JDialog jDialog3;
-    private javax.swing.JDialog jDialog4;
+    private javax.swing.JDialog noRecordDialog;
     private javax.swing.JDialog itemsDialog;
     private javax.swing.JDialog itemsErrorDialog;
-    private javax.swing.JFrame MainFrame;
+    private javax.swing.JFrame GameFrame;
     private javax.swing.JLabel header;
     private javax.swing.JLabel enemyDamage;
     private javax.swing.JLabel jLabel11;
@@ -1206,4 +1227,14 @@ public class GUI extends JFrame {
     private javax.swing.JTable resultsTable;
     private javax.swing.JTextField playerNameField;
     // End of variables declaration//GEN-END:variables
+
+    private javax.swing.JLabel locationLabel;
+    private javax.swing.JTextField locationNumberField;
+    private javax.swing.JButton locationButton;
+    private javax.swing.JDialog locationDialog;
+
+    private javax.swing.JLabel currentEnemy;
+    private javax.swing.JLabel enemies;
+    private javax.swing.JLabel currentLocation;
+    private javax.swing.JLabel locations;
 }

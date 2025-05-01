@@ -17,7 +17,7 @@ public class SubZero extends Enemy {
     public SubZero(int level, int health, int damage) {
         super(level, health, damage);
         this.name = "SubZero";
-        this.image = "SubZero.jpg";
+        this.image = "images/SubZero.png";
         this.type = "маг";
     }
 

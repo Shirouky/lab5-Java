@@ -17,7 +17,7 @@ public class Baraka extends Enemy {
     public Baraka(int level, int health, int damage){
         super (level, health, damage);
         this.name = "Baraka";
-        this.image = "Baraka.jpg";
+        this.image = "images/Baraka.png";
         this.type = "танк";
     }
 

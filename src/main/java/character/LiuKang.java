@@ -19,7 +19,7 @@ public class LiuKang extends Enemy {
     public LiuKang(int level, int health, int damage) {
         super(level, health, damage);
         this.name = "Liu Kang";
-        this.image = "Liu Kang.jpg";
+        this.image = "images/LiuKang.png";
         this.type = "боец";
     }
 

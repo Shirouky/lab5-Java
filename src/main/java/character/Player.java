@@ -23,6 +23,7 @@ public class Player extends Character {
         this.experience = 0;
         this.nextExperience = 40;
         this.name = "You";
+        this.image = "images/Dipper.png";
     }
 
     /**

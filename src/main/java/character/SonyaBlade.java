@@ -17,7 +17,7 @@ public class SonyaBlade extends Enemy {
     public SonyaBlade(int level, int health, int damage) {
         super(level, health, damage);
         this.name = "Sonya Blade";
-        this.image = "Sonya Blade.jpg";
+        this.image = "images/SonyaBlade.png";
         this.type = "солдат";
     }
 

@@ -60,7 +60,10 @@ public class GUI extends JFrame {
         player = controller.getPlayer();
 
         playerName.setText(player.getName() + " (" + player.getType() + ")");
-        playerImage.setIcon(new ImageIcon(player.getImage()));
+        ImageIcon imageIcon = new ImageIcon(player.getImage());
+        Image image = imageIcon.getImage();
+        Image newimg = image.getScaledInstance(250, 300,  java.awt.Image.SCALE_SMOOTH);
+        playerImage.setIcon(new ImageIcon(newimg));
         playerLevel.setText(player.getLevel() + " level");
         damage.setText(Integer.toString(player.getDamage()));
         playerHealth.setText(player.getHealth() + "/" + player.getMaxHealth());
@@ -77,7 +80,10 @@ public class GUI extends JFrame {
         enemy = controller.getEnemy();
 
         enemyName.setText(enemy.getName() + " (" + enemy.getType() + ")");
-        enemyImage.setIcon(new ImageIcon(enemy.getImage()));
+        ImageIcon imageIcon = new ImageIcon(enemy.getImage());
+        Image image = imageIcon.getImage();
+        Image newimg = image.getScaledInstance(250, 300,  java.awt.Image.SCALE_SMOOTH);
+        enemyImage.setIcon(new ImageIcon(newimg));
         enemyLevel.setText(enemy.getLevel() + " level");
         enemyDamage.setText(Integer.toString(enemy.getDamage()));
         enemyHealth.setText(enemy.getHealth() + "/" + enemy.getMaxHealth());

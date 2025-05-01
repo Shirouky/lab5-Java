@@ -1,17 +1,12 @@
 package objects;
 
 public class Item {
-
     private final String name;
     private int amount;
 
-    public Item(String name, int count) {
+    public Item(String name, int amount) {
         this.name = name;
-        this.amount = count;
-    }
-
-    public void increaseAmount() {
-        this.amount++;
+        this.amount = amount;
     }
 
     public String getName() {
@@ -20,6 +15,10 @@ public class Item {
 
     public int getAmount() {
         return this.amount;
+    }
+
+    public void increaseAmount() {
+        this.amount++;
     }
 
     public void decreaseAmount() {

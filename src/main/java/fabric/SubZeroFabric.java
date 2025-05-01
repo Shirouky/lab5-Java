@@ -2,12 +2,11 @@ package fabric;
 
 
 import character.SubZero;
-import character.Character;
+import character.Enemy;
 
 public class SubZeroFabric implements EnemyFabricInterface {
-
     @Override
-    public Character create() {
+    public Enemy create() {
         return new SubZero(1, 60, 16);
     }
 

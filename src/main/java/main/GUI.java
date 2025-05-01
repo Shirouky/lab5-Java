@@ -1,12 +1,14 @@
 package main;
 
+import character.Enemy;
 import character.Player;
 import objects.Item;
-import character.Character;
 import objects.Result;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
@@ -14,26 +16,33 @@ import java.util.Objects;
 
 public class GUI extends JFrame {
     Player player;
-    Character enemy;
+    Enemy enemy;
     Controller controller;
 
     public GUI(Controller controller) {
         this.controller = controller;
         initComponents();
-        writeToTable(controller.readFromExcel());
-
-        itemsGroup.add(itemsRadio1);
-        itemsGroup.add(itemsRadio2);
-        itemsGroup.add(itemsRadio3);
+        writeToTable(controller.importData());
     }
 
+    /**
+     * <p>Метод начала игры</p>
+     *
+     * @since 1.0
+     */
     private void startGame() {
         locationDialog.dispose();
 
-        int locations = Integer.parseInt(locationNumberField.getText());
+        int locations;
+        try {
+            locations = Integer.parseInt(locationNumberField.getText());
+        } catch (NumberFormatException e) {
+            locations = 3;
+        }
+
         controller.initGame(locations);
         GameFrame.setVisible(rootPaneCheckingEnabled);
-        GameFrame.setSize(1000, 700);
+        GameFrame.setSize(1100, 700);
 
         newRoundTexts();
     }
@@ -42,6 +51,11 @@ public class GUI extends JFrame {
         locationDialog.setVisible(true);
     }
 
+    /**
+     * <p>Метод для обновления всех заголовков, связанных с игроком</p>
+     *
+     * @since 1.0
+     */
     private void initPlayer() {
         player = controller.getPlayer();
 
@@ -54,6 +68,11 @@ public class GUI extends JFrame {
         playerProgressBar.setValue(player.getHealth());
     }
 
+    /**
+     * <p>Метод для обновления всех заголовков, связанных с врагом</p>
+     *
+     * @since 1.0
+     */
     private void initEnemy() {
         enemy = controller.getEnemy();
 
@@ -66,6 +85,11 @@ public class GUI extends JFrame {
         enemyProgressBar.setValue(enemy.getHealth());
     }
 
+    /**
+     * <p>Метод для обновления заголовков зелий</p>
+     *
+     * @since 1.0
+     */
     public void initItems() {
         Item[] items = controller.getItems();
         itemsRadio1.setText(items[0].getName() + ", " + items[0].getAmount() + " шт");
@@ -73,10 +97,16 @@ public class GUI extends JFrame {
         itemsRadio3.setText(items[2].getName() + ", " + items[2].getAmount() + " шт");
     }
 
+    /**
+     * <p>Метод для обновления всех заголовком для нового врага</p>
+     *
+     * @since 1.0
+     */
     private void newRoundTexts() {
         initEnemy();
         initPlayer();
 
+        statusLabel.setText("");
         locations.setText(controller.getCurrentLocation() + "/" + controller.getLocations());
         enemies.setText(controller.getCurrentEnemy() + "/" + controller.getEnemies());
 
@@ -91,6 +121,11 @@ public class GUI extends JFrame {
         initItems();
     }
 
+    /**
+     * <p>Метод для обновления заголовков в течение раунда</p>
+     *
+     * @since 1.0
+     */
     private void updateRoundTexts() {
         playerProgressBar.setValue(player.getHealth());
         enemyProgressBar.setValue(enemy.getHealth());
@@ -113,17 +148,52 @@ public class GUI extends JFrame {
         act();
     }
 
+    private void weaken() {
+        controller.weaken();
+        act();
+    }
+
+    /**
+     * <p>Метод для совершения действия игроком</p>
+     *
+     * @since 1.0
+     */
     private void act() {
         HashMap<String, String> labels = controller.act();
         statusLabel.setText(labels.get("status"));
         actionLabel.setText(labels.get("action"));
+        if (labels.get("progressbar") != null) {
+            Color color1 = new java.awt.Color(0, 255, 0);
+            Color color2 = new java.awt.Color(255, 0, 204);
+            if (Objects.equals(labels.get("progressbar"), "true")) {
+                if (Objects.equals(playerProgressBar.getForeground(), color1)) playerProgressBar.setForeground(color2);
+                else playerProgressBar.setForeground(color1);
+            } else {
+                if (Objects.equals(enemyProgressBar.getForeground(), color1)) enemyProgressBar.setForeground(color2);
+                else enemyProgressBar.setForeground(color1);
+            }
 
+        }
         if (controller.resurrect()) resurrect();
-        updateRoundTexts();
+
+        if (controller.checkLevel()) {
+            levelDialog.setVisible(true);
+            itemsButton.setEnabled(false);
+            attackButton.setEnabled(false);
+            defendButton.setEnabled(false);
+            weakenButton.setEnabled(false);
+        } else {
+            updateRoundTexts();
+        }
 
         if (controller.isEnd()) endRound();
     }
 
+    /**
+     * <p>Метод для завершения раунда</p>
+     *
+     * @since 1.0
+     */
     private void endRound() {
         HashMap<String, String> labels = controller.roundResult();
         if (Objects.equals(labels.get("action"), "endGame")) {
@@ -150,6 +220,11 @@ public class GUI extends JFrame {
         endRoundDialog.dispose();
     }
 
+    /**
+     * <p>Метод для воскрешения игрока</p>
+     *
+     * @since 1.0
+     */
     private void resurrect() {
         Item item = controller.getItem(2);
         playerProgressBar.setValue(player.getHealth());
@@ -158,6 +233,34 @@ public class GUI extends JFrame {
         statusLabel.setText("Вы воскресли");
     }
 
+    /**
+     * <p>Метод для поднятия уровня игрока</p>
+     *
+     * @since 1.0
+     */
+    private void levelUP() {
+        String choice;
+        if (levelRadio1.isSelected()) {
+            choice = "HP";
+        } else {
+            choice = "DMG";
+        }
+
+        controller.levelUP(choice);
+        levelDialog.dispose();
+        itemsButton.setEnabled(true);
+        attackButton.setEnabled(true);
+        defendButton.setEnabled(true);
+        weakenButton.setEnabled(true);
+
+        newRoundTexts();
+    }
+
+    /**
+     * <p>Метод для обновления таблицы результатов</p>
+     *
+     * @since 1.0
+     */
     public void writeToTable(ArrayList<Result> results) {
         DefaultTableModel model = (DefaultTableModel) resultsTable.getModel();
         for (int i = 0; i < results.size(); i++) {
@@ -192,6 +295,11 @@ public class GUI extends JFrame {
         noRecordDialog.dispose();
     }
 
+    /**
+     * <p>Метод для использования предмета</p>
+     *
+     * @since 1.0
+     */
     private void useItem(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_useItemButtonActionPerformed
         int choice = 0;
         if (itemsRadio1.isSelected()) {
@@ -223,6 +331,11 @@ public class GUI extends JFrame {
         itemsErrorDialog.dispose();
     }//GEN-LAST:event_okButtonActionPerformed
 
+    /**
+     * <p>Метод для назначения всех стилей, поведения и тп всем компонентам swing</p>
+     *
+     * @since 1.0
+     */
     private void initComponents() {
         GameFrame = new javax.swing.JFrame();
         jPanel2 = new javax.swing.JPanel();
@@ -292,8 +405,10 @@ public class GUI extends JFrame {
         resultsButton = new javax.swing.JButton();
         MKImage = new javax.swing.JLabel();
 
+        weakenButton = new javax.swing.JButton();
+
         locationLabel = new javax.swing.JLabel("Введите количество локаций");
-        locationNumberField = new javax.swing.JTextField();
+        locationNumberField = new JFormattedTextField(NumberFormat.getNumberInstance());
         locationButton = new javax.swing.JButton();
         locationDialog = new javax.swing.JDialog();
 
@@ -301,6 +416,62 @@ public class GUI extends JFrame {
         locations = new javax.swing.JLabel("1");
         currentEnemy = new javax.swing.JLabel("Enemies in location:");
         enemies = new javax.swing.JLabel("1");
+
+        levelGroup = new javax.swing.ButtonGroup();
+        levelLabel = new javax.swing.JLabel("Вы повысили уровень! \nВы можете выбрать, \nкакую характеристику улучшить");
+        levelRadio1 = new javax.swing.JRadioButton("Здоровье");
+        levelRadio2 = new javax.swing.JRadioButton("Урон");
+        levelButton = new javax.swing.JButton("Далее");
+        levelDialog = new javax.swing.JDialog();
+
+        levelRadio1.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
+        levelRadio1.setForeground(new java.awt.Color(0, 0, 0));
+
+        levelRadio2.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
+        levelRadio2.setForeground(new java.awt.Color(0, 0, 0));
+
+        itemsGroup.add(itemsRadio1);
+        itemsGroup.add(itemsRadio2);
+        itemsGroup.add(itemsRadio3);
+
+        levelGroup.add(levelRadio1);
+        levelGroup.add(levelRadio2);
+        levelRadio1.setSelected(true);
+
+        levelButton.setBackground(new java.awt.Color(239, 237, 14));
+        levelButton.setFont(new java.awt.Font("Comic Sans MS", 1, 14)); // NOI18N
+        levelButton.setForeground(new java.awt.Color(0, 0, 0));
+
+
+        levelButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                levelUP();
+            }
+        });
+
+        levelDialog.setBounds(150, 150, 500, 200);
+        javax.swing.GroupLayout levelDialogLayout = new javax.swing.GroupLayout(levelDialog.getContentPane());
+        levelDialog.getContentPane().setLayout(levelDialogLayout);
+        levelDialogLayout.setHorizontalGroup(
+                levelDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(levelDialogLayout.createParallelGroup()
+                                .addComponent(levelLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(levelRadio1)
+                                .addComponent(levelRadio2)
+                                .addComponent(levelButton))
+
+        );
+        levelDialogLayout.setVerticalGroup(
+                levelDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(levelDialogLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(levelLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(levelRadio1)
+                                .addComponent(levelRadio2)
+                                .addComponent(levelButton)
+                                .addContainerGap())
+        );
+
 
         locationButton.setFont(new java.awt.Font("Comic Sans MS", 0, 12)); // NOI18N
         locationButton.setText("Продолжить");
@@ -336,6 +507,17 @@ public class GUI extends JFrame {
 
         playerImage.setIcon(new javax.swing.ImageIcon("Kitana.jpg")); // NOI18N
 
+        weakenButton.setBackground(new java.awt.Color(255, 0, 204));
+        weakenButton.setFont(new java.awt.Font("Comic Sans MS", 1, 12)); // NOI18N
+        weakenButton.setForeground(new java.awt.Color(0, 0, 0));
+        weakenButton.setText("Ослабить");
+        weakenButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                weaken();
+            }
+        });
+
+
         attackButton.setBackground(new java.awt.Color(255, 0, 0));
         attackButton.setFont(new java.awt.Font("Comic Sans MS", 1, 12)); // NOI18N
         attackButton.setForeground(new java.awt.Color(0, 0, 0));
@@ -357,7 +539,7 @@ public class GUI extends JFrame {
         });
 
         playerProgressBar.setBackground(new java.awt.Color(204, 204, 204));
-        playerProgressBar.setForeground(new java.awt.Color(51, 255, 51));
+        playerProgressBar.setForeground(new java.awt.Color(0, 255, 0));
         playerProgressBar.setMaximum(80);
         playerProgressBar.setMinimum(-1);
 
@@ -546,6 +728,8 @@ public class GUI extends JFrame {
                                                                 .addComponent(attackButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addGap(46, 46, 46)
                                                                 .addComponent(defendButton, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(46, 46, 46)
+                                                                .addComponent(weakenButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addGap(68, 68, 68))))))
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addGroup(jPanel2Layout.createSequentialGroup()
@@ -616,7 +800,8 @@ public class GUI extends JFrame {
                                                         .addComponent(itemsButton, javax.swing.GroupLayout.DEFAULT_SIZE, 44, Short.MAX_VALUE)
                                                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                                                 .addComponent(attackButton, javax.swing.GroupLayout.DEFAULT_SIZE, 44, Short.MAX_VALUE)
-                                                                .addComponent(defendButton, javax.swing.GroupLayout.DEFAULT_SIZE, 44, Short.MAX_VALUE)))
+                                                                .addComponent(defendButton, javax.swing.GroupLayout.DEFAULT_SIZE, 44, Short.MAX_VALUE)
+                                                                .addComponent(weakenButton, javax.swing.GroupLayout.DEFAULT_SIZE, 44, Short.MAX_VALUE)))
                                                 .addGap(14, 14, 14))))
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addGroup(jPanel2Layout.createSequentialGroup()
@@ -711,7 +896,6 @@ public class GUI extends JFrame {
         playerNameField.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         playerNameField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                System.out.println(236);
                 jTextField1ActionPerformed();
             }
         });
@@ -975,9 +1159,9 @@ public class GUI extends JFrame {
                                         .addGroup(itemsPanelLayout.createSequentialGroup()
                                                 .addGap(120, 120, 120)
                                                 .addGroup(itemsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                                        .addComponent(itemsRadio2)
-                                                        .addComponent(itemsRadio3, javax.swing.GroupLayout.Alignment.LEADING)
                                                         .addComponent(itemsRadio1, javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(itemsRadio2, javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(itemsRadio3, javax.swing.GroupLayout.Alignment.LEADING)
                                                         .addComponent(jLabel30, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 168, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                         .addGroup(itemsPanelLayout.createSequentialGroup()
                                                 .addGap(139, 139, 139)
@@ -1229,7 +1413,7 @@ public class GUI extends JFrame {
     // End of variables declaration//GEN-END:variables
 
     private javax.swing.JLabel locationLabel;
-    private javax.swing.JTextField locationNumberField;
+    private javax.swing.JFormattedTextField locationNumberField;
     private javax.swing.JButton locationButton;
     private javax.swing.JDialog locationDialog;
 
@@ -1237,4 +1421,13 @@ public class GUI extends JFrame {
     private javax.swing.JLabel enemies;
     private javax.swing.JLabel currentLocation;
     private javax.swing.JLabel locations;
+
+    private javax.swing.ButtonGroup levelGroup;
+    private javax.swing.JLabel levelLabel;
+    private javax.swing.JRadioButton levelRadio1;
+    private javax.swing.JRadioButton levelRadio2;
+    private javax.swing.JButton levelButton;
+    private javax.swing.JDialog levelDialog;
+
+    private javax.swing.JButton weakenButton;
 }

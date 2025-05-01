@@ -1,10 +1,13 @@
 package fabric;
 
-import character.Character;
+import character.Enemy;
 
+/**
+ * EnemyFabric - это фабрика выбора нужной фабрики для осздания нужного врага
+ * @author Деребас Любовь
+ */
 public class EnemyFabric {
-
-    public Character create(int enemyIndex) {
+    public Enemy create(int enemyIndex) {
         EnemyFabricInterface fabric = switch (enemyIndex) {
             case 0 -> new BarakaFabric();
             case 1 -> new SubZeroFabric();

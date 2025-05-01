@@ -1,44 +1,44 @@
 package main;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 
 import character.*;
-import character.Action;
 import character.Character;
 import fabric.EnemyFabric;
 import objects.Item;
 import objects.Result;
-import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import static character.Action.*;
 
+/**
+ * Controller - это обработчик всех действий игрока и врага и хода игры
+ *
+ * @author Деребас Любовь
+ */
+
 public class Controller {
-    Player player;
-    Character enemy;
-    Item[] items = new Item[3];
-    private final ArrayList<Result> results = new ArrayList<>();
-    character.Action[] behaviour = {DEFEND};
+    private Player player;
+    private Enemy enemy;
+    private final Item[] items = new Item[3];
+    private final Excel excel = new Excel();
+    private ArrayList<Result> results = new ArrayList<>();
+
     private boolean playerTurn = true;
-    int attackNumber = -1;
     private final int[] nextLevelExperience = {40, 90, 180, 260, 410, 1000};
-    private final Action[][] enemyBehaviour = {{ATTACK, DEFEND}, {ATTACK, ATTACK, DEFEND}, {DEFEND, ATTACK, DEFEND}, {ATTACK, ATTACK, ATTACK, ATTACK}};
-    private final Character[] enemies = new Character[6];
-    EnemyFabric fabric = new EnemyFabric();
+    private final Enemy[] enemies = new Enemy[6];
     private int locations;
     private int currentLocation;
     private int currentEnemy;
     private int locationEnemies;
-    private int maxEnemies = 5;
-    private int minEnemies = 2;
+    private final int maxEnemies = 5;
+    private final int minEnemies = 2;
 
+    /**
+     * <p>Метод начала игры</p>
+     *
+     * @param locations количество локаций в игре
+     * @since 1.0
+     */
     public void initGame(int locations) {
         player = new Player(0, 80, 16);
         Random random = new Random();
@@ -47,6 +47,7 @@ public class Controller {
         currentEnemy = 1;
         locationEnemies = random.nextInt(maxEnemies - minEnemies) + minEnemies;
 
+        EnemyFabric fabric = new EnemyFabric();
         for (int i = 0; i < 6; i++) {
             enemies[i] = fabric.create(i);
         }
@@ -55,7 +56,10 @@ public class Controller {
     }
 
     public void newEnemy() {
-        if (currentEnemy == locationEnemies) enemy = enemies[4];
+        if (currentEnemy == locationEnemies) {
+            Random random = new Random();
+            enemy = enemies[random.nextInt(2) + 4];
+        }
         else enemy = enemies[(int) (Math.random() * 4)];
     }
 
@@ -73,37 +77,72 @@ public class Controller {
         player.setAction(ATTACK);
     }
 
-    public HashMap<String, String> act() {
-        if (attackNumber < behaviour.length - 1) {
-            attackNumber++;
-        } else {
-            behaviour = chooseBehavior(enemy);
-            attackNumber = 0;
-        }
-        enemy.setAction(behaviour[attackNumber]);
-
-        playerTurn = !playerTurn;
-        if (playerTurn) {
-            return move(player, enemy);
-        } else {
-            return move(enemy, player);
-        }
+    public void weaken() {
+        player.setAction(WEAKEN);
     }
 
+    /**
+     * <p>Метод совершения хода</p>
+     *
+     * @since 1.0
+     */
+    public HashMap<String, String> act() {
+        enemy.behave(player.getActions());
+
+        if (playerTurn) {
+            playerTurn = false;
+            return move(player, enemy);
+        } else {
+            playerTurn = true;
+            return move(enemy, player);
+        }
+
+    }
+
+    /**
+     * <p>Метод определения результата хода</p>
+     *
+     * @param character1 действующий персонаж
+     * @param character2 отвечающий персонаж
+     * @since 1.0
+     */
     public HashMap<String, String> move(Character character1, Character character2) {
         HashMap<String, String> labels = new HashMap<>();
+        labels.put("status", "");
+//        System.out.println(character1.getAction().toString() + " " + character2.getAction().toString() + " " + character1.getType() + " " + character2.getType() + String.valueOf(character1.isVulnerable()) + String.valueOf(character2.isVulnerable()));
+        if (character1.isVulnerable() && character2.getAction() == ATTACK) {
+            character1.resetVulnerable();
+            character2.buff();
+            labels.put("status", character1.getName() + " removed weakening and " + character2.getName() + " got buff");
+            labels.put("progressbar", String.valueOf(character1 instanceof Player));
+        }
+        if (character2.isVulnerable() && character1.getAction() == ATTACK) {
+            character2.resetVulnerable();
+            character1.buff();
+            labels.put("status", character2.getName() + " removed weakening and " + character1.getName() + " got buff");
+            labels.put("progressbar", String.valueOf(character2 instanceof Player));
+        }
+
         switch (character1.getAction()) {
             case REGENERATE:
                 switch (character2.getAction()) {
                     case DEFEND: {
                         character1.heal((int) ((character1.getMaxHealth() - character1.getHealth()) * 0.5));
                         labels.put("action", character1.getName() + " regenerated");
+                        break;
+                    }
+                    case STUN: {
+                        character1.heal((int) ((character1.getMaxHealth() - character1.getHealth()) * 0.6));
+                        labels.put("action", character1.getName() + " regenerated");
+                        break;
                     }
                     case ATTACK: {
                         character1.takeDamage(character2.getDamage() * 2);
                         labels.put("action", character2.getName() + " stopped regeneration");
+                        break;
                     }
                 }
+                break;
             case ATTACK:
                 switch (character2.getAction()) {
                     case DEFEND: {
@@ -116,27 +155,33 @@ public class Controller {
                         }
                         break;
                     }
-                    case ATTACK: {
+                    case ATTACK, STUN: {
                         character2.takeDamage(character1.getDamage());
                         labels.put("action", character1.getName() + " attacked");
                         break;
                     }
                 }
+                break;
             case DEFEND:
                 switch (character2.getAction()) {
                     case DEFEND: {
-//                        isStunned = Math.random() <= 0.5;
+                        if (Math.random() <= 0.5) character2.setAction(STUN);
                         labels.put("action", "Both defended themselves");
                         break;
                     }
                     case ATTACK: {
-                        labels.put("action", character1.getName() + " didn't attacked");
+                        labels.put("action", character1.getName() + " didn't attack");
+                        break;
+                    }
+                    case STUN: {
+                        labels.put("action", "Nobody attacked");
                         break;
                     }
                 }
+                break;
             case STUN:
                 labels.put("status", character1.getName() + " was stunned");
-//                character1.setAction(ATTACK);
+                character1.setAction(ATTACK);
                 switch (character2.getAction()) {
                     case DEFEND: {
                         labels.put("action", character2.getName() + " didn't attacked");
@@ -147,11 +192,44 @@ public class Controller {
                         labels.put("action", character2.getName() + " attacked");
                         break;
                     }
+                    case WEAKEN: {
+                        labels.put("action", character1.getName() + " was weakened");
+                        break;
+                    }
                 }
+                break;
+            case WEAKEN:
+                switch (character2.getAction()) {
+                    case DEFEND: {
+                        if (Math.random() <= 0.75) {
+                            character2.setVulnerable();
+                            labels.put("action", character2.getName() + " was weakened");
+                            labels.put("progressbar", String.valueOf(character2 instanceof Player));
+                        } else {
+                            labels.put("action", character2.getName() + " wasn't weakened");
+                        }
+                        break;
+                    }
+                    case ATTACK: {
+                        character1.takeDamage(character2.getDamage());
+                        labels.put("action", character2.getName() + " wasn't weakened and attacked");
+                        break;
+                    }
+                    case WEAKEN: {
+                        labels.put("action", "Nobody was weakened");
+                        break;
+                    }
+                }
+                break;
         }
         return labels;
     }
 
+    /**
+     * <p>Метод завершения прохождения локации</p>
+     *
+     * @since 1.0
+     */
     public HashMap<String, String> roundResult() {
         if (currentEnemy == locationEnemies) {
             return endRound();
@@ -164,6 +242,11 @@ public class Controller {
         return player.getHealth() == 0 | enemy.getHealth() == 0;
     }
 
+    /**
+     * <p>Метод завершения сражения</p>
+     *
+     * @since 1.0
+     */
     public HashMap<String, String> end() {
         HashMap<String, String> labels = new HashMap<>();
         labels.put("action", "endRound");
@@ -177,20 +260,21 @@ public class Controller {
                 addItems(25, 15, 5);
                 player.addPoints();
             }
-            enemy.reset();
-            player.reset();
-            upgrade();
-            newEnemy();
-
-            if (currentLocation == locations) return endGame();
         } else {
             labels.put("endRoundLabel", enemy.getName() + " win");
         }
+        enemy.reset();
+        player.reset();
+
+        newEnemy();
+
+        if (currentLocation == locations) return endGame();
+
         labels.put("currentEnemy", String.valueOf(currentEnemy));
         labels.put("currentLocation", String.valueOf(currentLocation));
         labels.put("locationEnemies", String.valueOf(locationEnemies));
 
-        resetRound();
+        playerTurn = true;
         return labels;
     }
 
@@ -199,6 +283,11 @@ public class Controller {
         return end();
     }
 
+    /**
+     * <p>Метод обновления данных для новой локации</p>
+     *
+     * @since 1.0
+     */
     public HashMap<String, String> endRound() {
         Random random = new Random();
         currentEnemy = 1;
@@ -208,6 +297,11 @@ public class Controller {
         return end();
     }
 
+    /**
+     * <p>Метод завершения игры</p>
+     *
+     * @since 1.0
+     */
     public HashMap<String, String> endGame() {
         HashMap<String, String> labels = new HashMap<>();
         labels.put("action", "endGame");
@@ -231,83 +325,74 @@ public class Controller {
             labels.put("dialog", "2");
             labels.put("victoryLabel", text);
         }
-        resetRound();
+        playerTurn = true;
         return labels;
     }
 
+    /**
+     * <p>Метод завершения игры в топе</p>
+     *
+     * @param name имя игрока для сохранения
+     * @since 1.0
+     */
     public ArrayList<Result> endGameTop(String name) {
         results.add(new Result(name, player.getPoints()));
         results.sort(Comparator.comparing(Result::getPoints).reversed());
-        writeToExcel();
+        exportData();
         return results;
     }
 
+    /**
+     * <p>Метод воскрешения игрока</p>
+     *
+     * @since 1.0
+     */
     public boolean resurrect() {
         if (player.getHealth() == 0 & items[2].getAmount() > 0) {
-            player.setNewHealth((int) (player.getMaxHealth() * 0.05));
+            player.setHealth((int) (player.getMaxHealth() * 0.05));
             items[2].decreaseAmount();
             return true;
         }
         return false;
     }
 
-    public void upgrade() {
-        if (player.getNextExperience() <= player.getExperience()) {
-            player.levelUP(player);
-            for (int i = 0; i < 5; i++) {
-                if (nextLevelExperience[i] == player.getNextExperience()) {
-                    player.setNextExperience(nextLevelExperience[i + 1]);
-                    for (int j = 0; j < 4; j++) {
-                        enemies[j].levelUP(player);
-                    }
-                    break;
+
+    public boolean checkLevel() {
+        return player.getNextExperience() <= player.getExperience();
+    }
+
+    /**
+     * <p>Метод поднятия уровня игрока и врагов</p>
+     *
+     * @param choice вывбор игрока: улучшать здоровье или урон
+     * @since 1.0
+     */
+    public void levelUP(String choice) {
+        player.levelUP();
+        if (Objects.equals(choice, "HP")) player.levelHP(player);
+        else player.levelDMG(player);
+        for (int i = 0; i < 5; i++) {
+            if (nextLevelExperience[i] == player.getNextExperience()) {
+                player.setNextExperience(nextLevelExperience[i + 1]);
+                for (int j = 0; j < 4; j++) {
+                    enemies[j].levelUP();
+                    enemies[j].levelHP(player);
+                    enemies[j].levelDMG(player);
                 }
+                break;
             }
         }
+
     }
 
-    private void resetRound() {
-        playerTurn = true;
-        attackNumber = -1;
-        behaviour = new Action[]{DEFEND};
-    }
-
-    public Action[] enemyBehavior(int prob1, int prob2, int prob3) {
-        Action[] arr = null;
-        Random random = new Random();
-        double randomN = random.nextDouble() * 100;
-        if (randomN < prob1) {
-            arr = enemyBehaviour[0];
-        } else if (randomN < prob1 + prob2) {
-            arr = enemyBehaviour[1];
-        } else if (randomN < prob1 + prob2 + prob3) {
-            arr = enemyBehaviour[2];
-        } else if (randomN < 100) {
-            arr = enemyBehaviour[3];
-        }
-        return arr;
-    }
-
-    public Action[] chooseBehavior(Character enemy) {
-        Action[] arr = null;
-        if (enemy instanceof Baraka) {
-            arr = enemyBehavior(15, 15, 60);
-        }
-        if (enemy instanceof SubZero) {
-            arr = enemyBehavior(25, 25, 0);
-        }
-        if (enemy instanceof LiuKang) {
-            arr = enemyBehavior(13, 13, 10);
-        }
-        if (enemy instanceof SonyaBlade) {
-            arr = enemyBehavior(25, 25, 50);
-        }
-        if (enemy instanceof ShaoKahn) {
-            arr = enemyBehavior(10, 45, 0);
-        }
-        return arr;
-    }
-
+    /**
+     * <p>Метод добавления новых предментов после сражения</p>
+     *
+     * @param prob1 вероятность выпадения первого предмета
+     * @param prob2 вероятность выпадения второго предмета
+     * @param prob3 вероятность выпадения третьего предмета
+     * @since 1.0
+     */
     public void addItems(int prob1, int prob2, int prob3) {
         Random random = new Random();
         if (random.nextDouble() * 100 < prob1) {
@@ -321,6 +406,12 @@ public class Controller {
         }
     }
 
+    /**
+     * <p>Метод использования предметов</p>
+     *
+     * @param choice выбор игроком предмета
+     * @since 1.0
+     */
     public boolean useItem(int choice) {
         boolean isUsed = true;
         switch (choice) {
@@ -344,40 +435,12 @@ public class Controller {
     }
 
 
-    public void writeToExcel() {
-        XSSFWorkbook book = new XSSFWorkbook();
-        XSSFSheet sheet = book.createSheet("Результаты ТОП 10");
-        XSSFRow r = sheet.createRow(0);
-        r.createCell(0).setCellValue("№");
-        r.createCell(1).setCellValue("Имя");
-        r.createCell(2).setCellValue("Количество баллов");
-        for (int i = 0; i < results.size(); i++) {
-            if (i < 10) {
-                XSSFRow r2 = sheet.createRow(i + 1);
-                r2.createCell(0).setCellValue(i + 1);
-                r2.createCell(1).setCellValue(results.get(i).getName());
-                r2.createCell(2).setCellValue(results.get(i).getPoints());
-            }
-        }
-        File f = new File("Results.xlsx");
-        try {
-            book.write(new FileOutputStream(f));
-            book.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    public void exportData() {
+        excel.exportData(results);
     }
 
-    public ArrayList<Result> readFromExcel() {
-        try {
-            XSSFWorkbook book = new XSSFWorkbook("Results.xlsx");
-            XSSFSheet sh = book.getSheetAt(0);
-            for (int i = 1; i <= sh.getLastRowNum(); i++) {
-                results.add(new Result(sh.getRow(i).getCell(1).getStringCellValue(), (int) sh.getRow(i).getCell(2).getNumericCellValue()));
-            }
-        } catch (org.apache.poi.openxml4j.exceptions.InvalidOperationException | IOException e) {
-            System.out.println("No file");
-        }
+    public ArrayList<Result> importData() {
+        results = excel.importData();
         return results;
     }
 
@@ -389,7 +452,7 @@ public class Controller {
         return player;
     }
 
-    public Character getEnemy() {
+    public Enemy getEnemy() {
         return enemy;
     }
 

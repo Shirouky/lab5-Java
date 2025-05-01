@@ -2,12 +2,12 @@ package fabric;
 
 
 import character.LiuKang;
-import character.Character;
+import character.Enemy;
 
 public class LiuKangFabric implements EnemyFabricInterface {
 
     @Override
-    public Character create() {
+    public Enemy create() {
         return new LiuKang(1, 70, 20);
     }
 }

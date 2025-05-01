@@ -1,19 +1,37 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package character;
 
+import java.util.Random;
+
+import static character.Action.ATTACK;
+import static character.Action.DEFEND;
+
 /**
- *
- * @author Мария
+ * LiuKang - это класс бойца
+ * <p>
+ * Для более детального понимания посмотрите родительские классы {@link character.Enemy} и {@link character.Character}.
+ * <p>
+ *     Особенность врага - высокая атака и шанс атаковать
+ * </p>
+ * @author Деребас Любовь
  */
-public class LiuKang extends Character {
+public class LiuKang extends Enemy {
 
     public LiuKang(int level, int health, int damage) {
         super(level, health, damage);
         this.name = "Liu Kang";
         this.image = "Liu Kang.jpg";
         this.type = "боец";
+    }
+
+    @Override
+    public void behave(int playerActions) {
+        Random random = new Random();
+        double randomN = random.nextDouble() * 100;
+
+        if (randomN < 80 + playerActions) {
+            action = ATTACK;
+        } else {
+            action = DEFEND;
+        }
     }
 }

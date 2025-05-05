@@ -45,7 +45,7 @@ public class Controller {
         this.locations = locations;
         currentLocation = 1;
         currentEnemy = 1;
-        locationEnemies = random.nextInt(maxEnemies - minEnemies) + minEnemies;
+        locationEnemies = random.nextInt(maxEnemies - minEnemies + player.getLevel()) + minEnemies;
 
         EnemyFabric fabric = new EnemyFabric();
         for (int i = 0; i < 6; i++) {
@@ -59,8 +59,7 @@ public class Controller {
         if (currentEnemy == locationEnemies) {
             Random random = new Random();
             enemy = enemies[random.nextInt(2) + 4];
-        }
-        else enemy = enemies[(int) (Math.random() * 4)];
+        } else enemy = enemies[(int) (Math.random() * 4)];
     }
 
     public void newItems() {
